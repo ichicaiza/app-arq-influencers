@@ -1,0 +1,5 @@
+{
+  "name": "Virtual Influencer Prompt Architect",
+  "description": "A professional tool that transforms basic character parameters into 5 hyper-realistic, high-detail image generation prompts for Midjourney, DALL-E 3, and Stable Diffusion.",
+  "requestFramePermissions": []
+}
