@@ -9,6 +9,19 @@ export const DEFAULT_PARAMS = {
   style: 'Photorealism, 8k, cinematic lighting, highly detailed',
 };
 
+export const UI_OPTIONS = {
+  sex: ['Woman', 'Man', 'Non-Binary'],
+  age: ['18-20', '21-25', '26-30', '31-40', '40+'],
+  hairColor: ['Blonde', 'Brunette', 'Black', 'Red', 'Pink', 'Silver', 'Neon Blue', 'Pastel'],
+  hairStyle: ['Long Straight', 'Bob Cut', 'Pixie', 'Wavy/Curly', 'Braids', 'Ponytail', 'Buzz Cut', 'Bald'],
+  physique: ['Slim', 'Athletic', 'Curvy', 'Muscular', 'Average', 'Plus Size'],
+  extras: ['Glasses', 'Septum Piercing', 'Nose Ring', 'Freckles', 'Face Tattoos', 'Heavy Makeup', 'Gold Chains', 'Headphones'],
+  clothing: ['Cyberpunk Techwear', 'Streetwear', 'Casual Chic', 'Luxury Suit', 'Swimwear', 'Vintage 90s', 'Sportswear', 'Fantasy Armor', 'Goth'],
+  environment: ['Neon City Night', 'Sunny Beach', 'Dense Forest', 'Cozy Cafe', 'Minimalist Studio', 'Gym', 'Rooftop', 'Desert'],
+  camera: ['Eye Level', 'Low Angle', 'High Angle', 'Drone Shot', 'Fish Eye', 'Macro'],
+  style: ['Photorealism 8K', 'Cinematic', 'Anime', 'Cyberpunk', 'Vaporwave', 'Oil Painting', '3D Render', 'Pixel Art', 'Pop Art', 'Polaroid', 'B&W Noir'],
+};
+
 export const SYSTEM_INSTRUCTION = `
 Actúa como un Ingeniero de Prompts de clase mundial, especializado en la creación de influencers virtuales hiperrealistas.
 

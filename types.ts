@@ -17,9 +17,24 @@ export interface PromptOutput {
   actionShot: string;
 }
 
+export interface GeneratedImage {
+  prompt: string;
+  imageData: string | null; // Base64 string
+  aspectRatio: string;
+}
+
+export interface ImageGenerationResult {
+  fullBody: GeneratedImage;
+  extremeCloseUp: GeneratedImage;
+  viewFromBehind: GeneratedImage;
+  sideProfile: GeneratedImage;
+  actionShot: GeneratedImage;
+}
+
 export enum GenerationStatus {
   IDLE = 'IDLE',
   LOADING = 'LOADING',
+  GENERATING_IMAGES = 'GENERATING_IMAGES',
   SUCCESS = 'SUCCESS',
   ERROR = 'ERROR'
 }

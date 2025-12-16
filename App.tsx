@@ -10,172 +10,272 @@ import {
   Clapperboard, 
   Palette,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Camera,
+  RefreshCcw,
+  ImageIcon
 } from 'lucide-react';
 import { InputGroup } from './components/InputGroup';
+import { SelectionGroup } from './components/SelectionGroup';
 import { PromptCard } from './components/PromptCard';
-import { generatePrompts } from './services/geminiService';
-import { InfluencerParams, PromptOutput, GenerationStatus } from './types';
-import { DEFAULT_PARAMS } from './constants';
+import { generateInfluencerImages } from './services/geminiService';
+import { InfluencerParams, ImageGenerationResult, GenerationStatus } from './types';
+import { DEFAULT_PARAMS, UI_OPTIONS } from './constants';
 
 const App: React.FC = () => {
-  const [params, setParams] = useState<InfluencerParams>(DEFAULT_PARAMS);
+  // Local state for individual UI selections
+  const [selections, setSelections] = useState({
+    sex: '',
+    age: '',
+    hairColor: '',
+    hairStyle: '',
+    physique: '',
+    extras: [] as string[],
+    clothing: '',
+    environment: '',
+    camera: '',
+    style: '',
+    action: ''
+  });
+
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
-  const [results, setResults] = useState<PromptOutput | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [results, setResults] = useState<ImageGenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setParams(prev => ({ ...prev, [name]: value }));
+  // Helper to handle single selections
+  const handleSingleSelect = (key: keyof typeof selections) => (value: string) => {
+    setSelections(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Helper to handle multi selections (Extras)
+  const handleMultiSelect = (value: string) => {
+    setSelections(prev => {
+      const current = prev.extras;
+      const updated = current.includes(value)
+        ? current.filter(item => item !== value)
+        : [...current, value];
+      return { ...prev, extras: updated };
+    });
+  };
+
+  const handleActionChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setSelections(prev => ({ ...prev, action: e.target.value }));
   };
 
   const handleSubmit = async () => {
-    // Basic validation
-    if (!params.sexAge || !params.clothing || !params.environment) {
-        setError("Please fill in at least Sex/Age, Clothing, and Environment to get good results.");
+    // Validate required fields
+    if (!selections.sex || !selections.clothing || !selections.environment) {
+        setError("Please select at least Sex, Clothing, and Environment.");
         return;
     }
 
     setStatus(GenerationStatus.LOADING);
+    setStatusMessage("Initializing...");
     setError(null);
     setResults(null);
 
+    // Combine granular selections into the API format
+    const apiParams: InfluencerParams = {
+      sexAge: `${selections.sex}, ${selections.age || 'Young Adult'}`,
+      physique: selections.physique,
+      hair: `${selections.hairColor} ${selections.hairStyle}`,
+      extras: selections.extras.join(', '),
+      clothing: selections.clothing,
+      environment: selections.environment,
+      action: selections.action,
+      style: `${selections.style}, ${selections.camera} Angle`,
+    };
+
     try {
-      const generatedPrompts = await generatePrompts(params);
-      setResults(generatedPrompts);
+      const generatedImages = await generateInfluencerImages(apiParams, (msg) => setStatusMessage(msg));
+      setResults(generatedImages);
       setStatus(GenerationStatus.SUCCESS);
     } catch (err: any) {
       setStatus(GenerationStatus.ERROR);
-      setError("Failed to generate prompts. Please check your API key or try again later.");
+      setError("Failed to generate images. Please check your API key.");
     }
   };
 
+  const handleReset = () => {
+    setSelections({
+      sex: '',
+      age: '',
+      hairColor: '',
+      hairStyle: '',
+      physique: '',
+      extras: [],
+      clothing: '',
+      environment: '',
+      camera: '',
+      style: '',
+      action: ''
+    });
+    setResults(null);
+    setStatus(GenerationStatus.IDLE);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 pb-20">
+    <div className="min-h-screen bg-slate-900 text-slate-100 pb-20 font-sans">
       {/* Header */}
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md bg-opacity-80">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-pink-500 to-violet-600 p-2 rounded-lg">
-              <Wand2 className="text-white w-6 h-6" />
+            <div className="bg-gradient-to-br from-pink-500 to-violet-600 p-2 rounded-lg shadow-lg shadow-pink-500/20">
+              <ImageIcon className="text-white w-5 h-5" />
             </div>
             <div>
               <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                Prompt Architect
+                Influencer Architect
               </h1>
-              <p className="text-xs text-slate-500 font-medium">Virtual Influencer Edition</p>
+              <p className="text-[10px] text-slate-500 font-medium tracking-wide uppercase">AI Image Generator</p>
             </div>
           </div>
-          <div className="text-xs font-mono text-slate-500 border border-slate-800 px-3 py-1 rounded-full">
-            Powered by Gemini 2.5 Flash
-          </div>
+          <button 
+            onClick={handleReset}
+            className="text-xs text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
+          >
+            <RefreshCcw size={12} /> Reset
+          </button>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Left Column: Input Form */}
-          <div className="lg:col-span-5 space-y-8">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white">Character Parameters</h2>
-              <p className="text-slate-400 text-sm">Define your virtual influencer's attributes below.</p>
-            </div>
-
-            <div className="bg-slate-800/30 p-6 rounded-2xl border border-slate-700/50 space-y-5 shadow-xl">
-              <InputGroup
-                label="Sex / Age"
-                name="sexAge"
-                value={params.sexAge}
-                onChange={handleChange}
-                placeholder="e.g. Woman, 25 years old"
-                icon={<User size={16} />}
-              />
+          {/* Left Column: Builder Interface */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-slate-800/30 p-5 rounded-2xl border border-slate-700/50 space-y-6 shadow-xl backdrop-blur-sm">
               
-              <div className="grid grid-cols-2 gap-4">
-                <InputGroup
-                  label="Physique"
-                  name="physique"
-                  value={params.physique}
-                  onChange={handleChange}
-                  placeholder="e.g. Athletic, Curvy"
-                  icon={<Dumbbell size={16} />}
+              {/* Section 1: The Avatar */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-2">I. The Avatar</h3>
+                
+                <SelectionGroup
+                  label="Sex / Gender"
+                  options={UI_OPTIONS.sex}
+                  selected={selections.sex}
+                  onChange={handleSingleSelect('sex')}
+                  icon={<User size={14} />}
                 />
-                <InputGroup
-                  label="Hair"
-                  name="hair"
-                  value={params.hair}
-                  onChange={handleChange}
-                  placeholder="e.g. Platinum bob"
-                  icon={<Scissors size={16} />}
+                
+                <SelectionGroup
+                  label="Age Range"
+                  options={UI_OPTIONS.age}
+                  selected={selections.age}
+                  onChange={handleSingleSelect('age')}
+                />
+
+                <SelectionGroup
+                  label="Physique"
+                  options={UI_OPTIONS.physique}
+                  selected={selections.physique}
+                  onChange={handleSingleSelect('physique')}
+                  icon={<Dumbbell size={14} />}
                 />
               </div>
 
-              <InputGroup
-                label="Extras (Features)"
-                name="extras"
-                value={params.extras}
-                onChange={handleChange}
-                placeholder="e.g. Nose piercing, freckles"
-                icon={<Sparkles size={16} />}
-              />
+              {/* Section 2: Look & Style */}
+              <div className="space-y-4 pt-2">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-2">II. The Look</h3>
 
-              <InputGroup
-                label="Clothing"
-                name="clothing"
-                value={params.clothing}
-                onChange={handleChange}
-                placeholder="e.g. Cyberpunk tech-wear jacket"
-                icon={<Shirt size={16} />}
-              />
+                <div className="grid grid-cols-2 gap-4">
+                  <SelectionGroup
+                    label="Hair Color"
+                    options={UI_OPTIONS.hairColor}
+                    selected={selections.hairColor}
+                    onChange={handleSingleSelect('hairColor')}
+                    icon={<Palette size={14} />}
+                  />
+                  <SelectionGroup
+                    label="Hair Style"
+                    options={UI_OPTIONS.hairStyle}
+                    selected={selections.hairStyle}
+                    onChange={handleSingleSelect('hairStyle')}
+                    icon={<Scissors size={14} />}
+                  />
+                </div>
 
-              <InputGroup
-                label="Environment"
-                name="environment"
-                value={params.environment}
-                onChange={handleChange}
-                placeholder="e.g. Tokyo neon streets at night"
-                icon={<MapPin size={16} />}
-              />
+                <SelectionGroup
+                  label="Clothing Style"
+                  options={UI_OPTIONS.clothing}
+                  selected={selections.clothing}
+                  onChange={handleSingleSelect('clothing')}
+                  icon={<Shirt size={14} />}
+                />
 
-              <InputGroup
-                label="Action"
-                name="action"
-                value={params.action}
-                onChange={handleChange}
-                placeholder="e.g. Eating ramen and laughing"
-                icon={<Clapperboard size={16} />}
-              />
+                <SelectionGroup
+                  label="Distinguishing Extras"
+                  options={UI_OPTIONS.extras}
+                  selected={selections.extras}
+                  onChange={handleMultiSelect}
+                  multiSelect
+                  icon={<Sparkles size={14} />}
+                />
+              </div>
 
-              <InputGroup
-                label="General Style"
-                name="style"
-                value={params.style}
-                onChange={handleChange}
-                placeholder="e.g. 8k, Photorealism, Cinematic"
-                icon={<Palette size={16} />}
-                isTextArea
-              />
+              {/* Section 3: The Scene */}
+              <div className="space-y-4 pt-2">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-2">III. The Scene</h3>
+                
+                <SelectionGroup
+                  label="Environment"
+                  options={UI_OPTIONS.environment}
+                  selected={selections.environment}
+                  onChange={handleSingleSelect('environment')}
+                  icon={<MapPin size={14} />}
+                />
 
-              <button
-                onClick={handleSubmit}
-                disabled={status === GenerationStatus.LOADING}
-                className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg
-                  ${status === GenerationStatus.LOADING 
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-pink-600 to-violet-600 hover:from-pink-500 hover:to-violet-500 text-white hover:shadow-pink-500/25'
-                  }`}
-              >
-                {status === GenerationStatus.LOADING ? (
-                  <>
-                    <Loader2 className="animate-spin" /> Generating...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 size={20} /> Generate Prompts
-                  </>
-                )}
-              </button>
+                <SelectionGroup
+                  label="Art Style"
+                  options={UI_OPTIONS.style}
+                  selected={selections.style}
+                  onChange={handleSingleSelect('style')}
+                  icon={<Palette size={14} />}
+                />
+
+                <SelectionGroup
+                  label="Camera Angle"
+                  options={UI_OPTIONS.camera}
+                  selected={selections.camera}
+                  onChange={handleSingleSelect('camera')}
+                  icon={<Camera size={14} />}
+                />
+
+                <div className="pt-2">
+                  <InputGroup
+                    label="Current Action (Be creative!)"
+                    name="action"
+                    value={selections.action}
+                    onChange={handleActionChange}
+                    placeholder="e.g. Sipping a matcha latte while reading a book..."
+                    icon={<Clapperboard size={14} />}
+                    isTextArea
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 sticky bottom-0 z-10">
+                <button
+                  onClick={handleSubmit}
+                  disabled={status === GenerationStatus.LOADING}
+                  className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-xl transform hover:scale-[1.02]
+                    ${status === GenerationStatus.LOADING 
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-pink-600 via-purple-600 to-violet-600 hover:from-pink-500 hover:to-violet-500 text-white shadow-purple-500/25'
+                    }`}
+                >
+                  {status === GenerationStatus.LOADING ? (
+                    <>
+                      <Loader2 className="animate-spin" /> {statusMessage || 'Processing...'}
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 size={20} /> Generate 5 Images
+                    </>
+                  )}
+                </button>
+              </div>
 
               {error && (
                 <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start gap-3 text-red-400 text-sm">
@@ -187,62 +287,78 @@ const App: React.FC = () => {
           </div>
 
           {/* Right Column: Output */}
-          <div className="lg:col-span-7">
-             <div className="space-y-6">
+          <div className="lg:col-span-8">
+             <div className="space-y-6 sticky top-24">
                 <div className="flex items-center justify-between">
-                   <h2 className="text-2xl font-bold text-white">Generated Prompts</h2>
+                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                     <span className="w-2 h-2 rounded-full bg-pink-500 inline-block"></span>
+                     Visual Output
+                   </h2>
                    {status === GenerationStatus.SUCCESS && (
-                     <span className="text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded">
-                       Generation Complete
+                     <span className="text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded border border-green-400/20">
+                       Success
                      </span>
                    )}
                 </div>
                 
                 {status === GenerationStatus.IDLE && (
-                  <div className="h-[600px] border-2 border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center text-slate-500">
-                    <Wand2 size={48} className="mb-4 opacity-50" />
-                    <p className="text-lg font-medium">Ready to create</p>
-                    <p className="text-sm opacity-60">Fill the form and hit generate</p>
+                  <div className="h-[600px] border-2 border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-slate-800/20">
+                    <ImageIcon size={48} className="mb-4 opacity-50" />
+                    <p className="text-lg font-medium">Ready to Visualize</p>
+                    <p className="text-sm opacity-60">Select options to generate 5 unique shots</p>
                   </div>
                 )}
 
                 {status === GenerationStatus.LOADING && (
-                   <div className="h-[600px] flex flex-col items-center justify-center space-y-4">
+                   <div className="h-[600px] flex flex-col items-center justify-center space-y-6 bg-slate-800/20 rounded-2xl border border-slate-700/50">
                      <div className="relative">
-                       <div className="w-16 h-16 border-4 border-slate-700 border-t-pink-500 rounded-full animate-spin"></div>
-                       <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-b-violet-500 rounded-full animate-spin-reverse"></div>
+                       <div className="w-20 h-20 border-4 border-slate-700 border-t-pink-500 rounded-full animate-spin"></div>
+                       <div className="absolute top-0 left-0 w-20 h-20 border-4 border-transparent border-b-violet-500 rounded-full animate-spin-reverse"></div>
                      </div>
-                     <p className="text-slate-400 animate-pulse">Designing your influencer...</p>
+                     <div className="text-center space-y-2">
+                        <p className="text-white font-medium animate-pulse text-lg">{statusMessage}</p>
+                        <p className="text-slate-500 text-xs font-mono">This may take up to 20 seconds</p>
+                     </div>
                    </div>
                 )}
 
                 {status === GenerationStatus.SUCCESS && results && (
-                  <div className="space-y-6 animate-fade-in">
-                    <PromptCard 
-                      index={1}
-                      title="Full Body Shot"
-                      prompt={results.fullBody}
-                    />
-                    <PromptCard 
-                      index={2}
-                      title="Extreme Close-Up"
-                      prompt={results.extremeCloseUp}
-                    />
-                    <PromptCard 
-                      index={3}
-                      title="View From Behind"
-                      prompt={results.viewFromBehind}
-                    />
-                    <PromptCard 
-                      index={4}
-                      title="Side Profile"
-                      prompt={results.sideProfile}
-                    />
-                    <PromptCard 
-                      index={5}
-                      title="Action Shot"
-                      prompt={results.actionShot}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                    <div className="md:col-span-1">
+                      <PromptCard 
+                        index={1}
+                        title="Full Body Shot"
+                        data={results.fullBody}
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <PromptCard 
+                        index={2}
+                        title="Extreme Close-Up"
+                        data={results.extremeCloseUp}
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <PromptCard 
+                        index={3}
+                        title="View From Behind"
+                        data={results.viewFromBehind}
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <PromptCard 
+                        index={4}
+                        title="Side Profile"
+                        data={results.sideProfile}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <PromptCard 
+                        index={5}
+                        title="Action Shot (Cinematic)"
+                        data={results.actionShot}
+                      />
+                    </div>
                   </div>
                 )}
              </div>
